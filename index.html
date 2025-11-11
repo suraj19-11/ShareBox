@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Notes — Quick Access</title>
+  <style>
+    :root{
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --muted:#6b7280;
+      --accent:#0f62fe;
+      --radius:12px;
+      font-family: Inter, system-ui, Arial, sans-serif;
+    }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:#0f1724;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{
+      max-width:980px;
+      margin:28px auto;
+      padding:20px;
+    }
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:18px;
+    }
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .logo{
+      width:52px;
+      height:52px;
+      background:linear-gradient(135deg,#0f62fe,#6f42c1);
+      border-radius:10px;
+      display:grid;
+      place-items:center;
+      color:white;
+      font-weight:700;
+      font-size:18px;
+      box-shadow:0 6px 18px rgba(15,98,254,0.12);
+    }
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:14px}
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:14px;
+      margin-top:18px;
+    }
+
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:14px;
+      box-shadow:0 6px 18px rgba(16,24,40,0.06);
+      border:1px solid rgba(15,23,42,0.04);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .title{font-weight:600}
+    .meta{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{
+      display:inline-block;
+      padding:8px 12px;
+      border-radius:10px;
+      text-decoration:none;
+      font-weight:600;
+      font-size:13px;
+      cursor:pointer;
+      border: none;
+      background:var(--accent);
+      color:white;
+    }
+    .btn.ghost{
+      background:transparent;
+      color:var(--accent);
+      border:1px solid rgba(15,98,254,0.12);
+    }
+    .small{font-size:13px;padding:6px 10px;border-radius:9px}
+
+    /* modal */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;
+      align-items:center;justify-content:center;z-index:60;padding:20px;
+    }
+    .modal{
+      width:100%;max-width:980px;height:80vh;background:white;border-radius:12px;overflow:hidden;box-shadow:0 18px 50px rgba(2,6,23,0.6);
+    }
+    .modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #f1f5f9}
+    .modal .body{height:calc(80vh - 56px);}
+    .modal iframe{width:100%;height:100%;border:0}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+
+    @media (max-width:520px){
+      .logo{width:44px;height:44px;font-size:16px}
+      h1{font-size:18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">N</div>
+        <div>
+          <h1>My Notes</h1>
+          <p class="lead">Direct preview and download. No login required.</p>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="meta">Shareable links from Google Drive</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="grid" id="fileGrid"></div>
+
+      <footer>
+        Tip: Agar college firewall Drive block kare to "Open Drive" link se try karo.
+      </footer>
+    </main>
+  </div>
+
+  <!-- modal preview -->
+  <div id="backdrop" class="modal-backdrop" role="dialog" aria-hidden="true">
+    <div class="modal" role="document">
+      <header>
+        <div id="modalTitle">Preview</div>
+        <div>
+          <button class="btn ghost small" id="openNew">Open in new tab</button>
+          <button class="btn small" id="closeModal">Close</button>
+        </div>
+      </header>
+      <div class="body">
+        <iframe id="previewFrame" src="" allow="fullscreen"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === LINKS LIST ===
+    const files = [
+      { 
+        name: "DWM - Data Warehouse & Mining (Full Notes Folder)", 
+        folderId: "1SKPaagCZPF4VJdpKQTOvvWoHl6KZvKWz", 
+        isFolder: true 
+      }
+      // You can add more items below if needed:
+      // { name: "Another Subject", id: "FILE_ID", isFolder: false }
+    ];
+    // ===================
+
+    const grid = document.getElementById('fileGrid');
+
+    function drivePreviewUrl(id){ return `https://drive.google.com/file/d/${id}/preview`; }
+    function driveFolderEmbedUrl(folderId){ return `https://drive.google.com/embeddedfolderview?id=${folderId}#grid`; }
+    function driveDownloadUrl(id){ return `https://drive.google.com/uc?export=download&id=${id}`; }
+    function driveFolderOpenUrl(folderId){ return `https://drive.google.com/drive/folders/${folderId}`; }
+
+    function render() {
+      grid.innerHTML = '';
+      files.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const metaType = f.isFolder ? "Google Drive Folder" : "Google Drive File";
+        card.innerHTML = `
+          <div class="title">${escapeHtml(f.name)}</div>
+          <div class="meta">${metaType}</div>
+          <div class="row" style="margin-top:6px">
+            <button class="btn small" data-action="preview" data-id="${f.folderId || f.id}" data-folder="${f.isFolder}">Preview</button>
+            <a class="btn ghost small" href="${f.isFolder ? driveFolderOpenUrl(f.folderId) : driveDownloadUrl(f.id)}" target="_blank" rel="noopener">Open Drive</a>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    const backdrop = document.getElementById('backdrop');
+    const previewFrame = document.getElementById('previewFrame');
+    const modalTitle = document.getElementById('modalTitle');
+    const openNewBtn = document.getElementById('openNew');
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="preview"]');
+      if (btn) {
+        const id = btn.getAttribute('data-id');
+        const isFolder = btn.getAttribute('data-folder') === 'true';
+        const item = files.find(x => (x.id === id || x.folderId === id));
+        if (!item) return;
+        modalTitle.textContent = item.name;
+        previewFrame.src = isFolder ? driveFolderEmbedUrl(id) : drivePreviewUrl(id);
+        openNewBtn.onclick = () => window.open(isFolder ? driveFolderOpenUrl(id) : drivePreviewUrl(id), '_blank');
+        backdrop.style.display = 'flex';
+        backdrop.setAttribute('aria-hidden','false');
+      }
+      if (e.target.id === 'closeModal' || e.target === backdrop) {
+        closeModal();
+      }
+    });
+
+    function closeModal(){
+      previewFrame.src = '';
+      backdrop.style.display = 'none';
+      backdrop.setAttribute('aria-hidden','true');
+    }
+
+    window.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && backdrop.style.display === 'flex') closeModal();
+    });
+
+    render();
+  </script>
+</body>
+</html>
